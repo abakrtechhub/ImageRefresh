@@ -1,0 +1,27 @@
+name: Security checks
+on:
+  push:
+    branches: ['review/**', main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  security:
+    name: Security checks
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check committed source without executing app or tests
+        shell: powershell
+        env:
+          REVIEW_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          REVIEW_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $argsForCheck = @{ Revision = $env:REVIEW_HEAD }
+          if ($env:REVIEW_BASE -and $env:REVIEW_BASE -notmatch '^0+$') { $argsForCheck.Base = $env:REVIEW_BASE }
+          & ./tools/Test-Security.ps1 @argsForCheck
